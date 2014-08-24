@@ -12,11 +12,6 @@ class Redis::Client
   self.query_time = Atomic.new(0)
 
   def call_with_timing(*args, &block)
-    Rails.logger.debug "################################################"
-    Rails.logger.debug "### #{args.first}"
-    Rails.logger.debug "### command: #{args.first[0]}"
-    Rails.logger.debug "### key: #{args.first[1]}"
-    Rails.logger.debug "################################################"
     start = Time.now
     call_without_timing(*args, &block)
   ensure
@@ -26,7 +21,7 @@ class Redis::Client
 
     # handle namespaced keys
     unless Rails.cache.options[:namespace].nil?
-      key.sub! "#{Rails.cache.options[:namespace}:"
+      key.sub! "#{Rails.cache.options[:namespace]}:"
     end
 
     Redis::Client.query_time.update { |value| value + duration }
