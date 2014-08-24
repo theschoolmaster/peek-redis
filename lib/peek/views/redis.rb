@@ -24,6 +24,11 @@ class Redis::Client
     command = args.first[0]
     key = args.first[1]
 
+    # handle namespaced keys
+    unless Rails.cache.options[:namespace].nil?
+      key.sub! "#{Rails.cache.options[:namespace}:"
+    end
+
     Redis::Client.query_time.update { |value| value + duration }
 
     Redis::Client.read_query_count.update { |value| value + 1 } if command == :get
