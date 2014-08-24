@@ -1,0 +1,21 @@
+#peek-redis
+  strong
+    span
+      a href="#" data-options="align:top" data-dropdown="redis-cache-expiry"
+       ' Expire Redis Cache Objects
+
+  ' redis time:
+  strong
+    span data-defer-to="#{view.defer_key}-duration"  ...
+
+  '  hits:
+  strong
+    span data-defer-to="#{view.defer_key}-hits"  ...
+  '  misses:
+  strong
+    span data-defer-to="#{view.defer_key}-misses"  ...
+
+
+  ul id="redis-cache-expiry" class="large content f-dropdown" data-dropdown-content=""
+    - view.keys.each do |cache_key|
+      li= link_to cache_key, peek.redis_expire_url(cache_key: URI.escape(cache_key)), remote: true, class: 'button', id: cache_key.parameterize

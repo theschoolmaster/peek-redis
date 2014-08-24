@@ -4,18 +4,31 @@ require 'atomic'
 # Instrument Redis time
 class Redis::Client
   class << self
-    attr_accessor :query_time, :query_count
+    attr_accessor :query_time, :read_query_count, :write_query_count, :keys
   end
-  self.query_count = Atomic.new(0)
+  self.read_query_count = Atomic.new(0)
+  self.write_query_count = Atomic.new(0)
+  self.keys = []
   self.query_time = Atomic.new(0)
 
   def call_with_timing(*args, &block)
+    Rails.logger.debug "################################################"
+    Rails.logger.debug "### #{args.first}"
+    Rails.logger.debug "### command: #{args.first[0]}"
+    Rails.logger.debug "### key: #{args.first[1]}"
+    Rails.logger.debug "################################################"
     start = Time.now
     call_without_timing(*args, &block)
   ensure
     duration = (Time.now - start)
+    command = args.first[0]
+    key = args.first[1]
+
     Redis::Client.query_time.update { |value| value + duration }
-    Redis::Client.query_count.update { |value| value + 1 }
+
+    Redis::Client.read_query_count.update { |value| value + 1 } if command == :get
+    Redis::Client.write_query_count.update { |value| value + 1 } if command == :setex
+    Redis::Client.keys << key
   end
   alias_method_chain :call, :timing
 end
@@ -36,12 +49,25 @@ module Peek
         end
       end
 
-      def calls
-        ::Redis::Client.query_count.value
+      def reads
+        ::Redis::Client.read_query_count.value
+      end
+
+      def writes
+        ::Redis::Client.write_query_count.value
+      end
+
+      def keys
+        ::Redis::Client.keys.uniq
       end
 
       def results
-        { :duration => formatted_duration, :calls => calls }
+        {
+          :duration => formatted_duration,
+          :hits => reads - writes,
+          :misses => writes,
+          :keys => keys,
+         }
       end
 
       private
@@ -50,7 +76,9 @@ module Peek
         # Reset each counter when a new request starts
         subscribe 'start_processing.action_controller' do
           ::Redis::Client.query_time.value = 0
-          ::Redis::Client.query_count.value = 0
+          ::Redis::Client.read_query_count.value = 0
+          ::Redis::Client.write_query_count.value = 0
+          ::Redis::Client.keys = []
         end
       end
     end
