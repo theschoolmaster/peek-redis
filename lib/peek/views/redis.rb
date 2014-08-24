@@ -21,7 +21,7 @@ class Redis::Client
 
     # handle namespaced keys
     unless Rails.cache.options[:namespace].nil?
-      key.sub! "#{Rails.cache.options[:namespace]}:"
+      key.sub! "#{Rails.cache.options[:namespace]}:", ''
     end
 
     Redis::Client.query_time.update { |value| value + duration }
