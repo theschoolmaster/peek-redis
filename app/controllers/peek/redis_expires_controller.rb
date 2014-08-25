@@ -1,8 +1,8 @@
 module Peek
-  class ExpiresController < ApplicationController
+  class RedisExpiresController < ApplicationController
     before_filter :restrict_non_access
 
-    def redis_expire
+    def expire
       @cache_key = CGI.unescape(params[:cache_key])
 
       # TODO: investigate using expire vs delete here...
