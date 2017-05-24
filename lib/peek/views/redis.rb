@@ -2,7 +2,24 @@ require 'redis'
 require 'atomic'
 
 # Instrument Redis time
+module Peek
+  module RedisInstrumented
+    def call(*args, &block)
+      start = Time.now
+      super(*args, &block)
+    ensure
+      duration = (Time.now - start)
+      ::Redis::Client.query_time.update { |value| value + duration }
+      ::Redis::Client.read_query_count.update { |value| value + 1 } if command == :get
+      ::Redis::Client.write_query_count.update { |value| value + 1 } if command == :setex
+      ::Redis::Client.keys << key
+    end
+  end
+end
+
+
 class Redis::Client
+  prepend Peek::RedisInstrumented
   class << self
     attr_accessor :query_time, :read_query_count, :write_query_count, :keys
   end
@@ -10,27 +27,6 @@ class Redis::Client
   self.write_query_count = Atomic.new(0)
   self.keys = []
   self.query_time = Atomic.new(0)
-
-  def call_with_timing(*args, &block)
-    start = Time.now
-    call_without_timing(*args, &block)
-  ensure
-    duration = (Time.now - start)
-    command = args.first[0]
-    key = args.first[1]
-
-    # handle namespaced keys
-    unless Rails.cache.options[:namespace].nil?
-      key.sub! "#{Rails.cache.options[:namespace]}:", ''
-    end
-
-    Redis::Client.query_time.update { |value| value + duration }
-
-    Redis::Client.read_query_count.update { |value| value + 1 } if command == :get
-    Redis::Client.write_query_count.update { |value| value + 1 } if command == :setex
-    Redis::Client.keys << key
-  end
-  alias_method_chain :call, :timing
 end
 
 module Peek
