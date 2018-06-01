@@ -19,7 +19,7 @@ module Peek
 
       ::Redis::Client.query_time.update { |value| value + duration }
       ::Redis::Client.read_query_count.update { |value| value + 1 } if command == :get
-      ::Redis::Client.write_query_count.update { |value| value + 1 } if command == :setex
+      ::Redis::Client.write_query_count.update { |value| value + 1 } if ( command == :setex || command == :set )
       ::Redis::Client.keys << key
     end
   end
