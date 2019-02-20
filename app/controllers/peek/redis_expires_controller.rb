@@ -5,9 +5,14 @@ module Peek
     def expire
       cache_keys = params[:cache_keys]
 
-      cache_keys.each do |key|
-        # TODO: investigate using expire vs delete here...
-        Rails.cache.delete key
+      # support for both arrays of cache keys and single string keys
+      # TODO: investigate using expire vs delete here...
+      if cache_keys.respond_to? :each
+        cache_keys.flatten.each do |key|
+          Rails.cache.delete_matched key
+        end
+      else
+        Rails.cache.delete_matched cache_keys
       end
 
       respond_to do |format|
