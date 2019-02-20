@@ -3,17 +3,15 @@ module Peek
     before_action :restrict_non_access
 
     def expire
-      @cache_key = CGI.unescape(params[:cache_key])
+      cache_keys = params[:cache_keys]
 
-      # TODO: investigate using expire vs delete here...
-      success = Rails.cache.delete @cache_key
+      cache_keys.each do |key|
+        # TODO: investigate using expire vs delete here...
+        Rails.cache.delete key
+      end
 
       respond_to do |format|
-        if success
-          format.js { render 'success' }
-        else
-          format.js { render 'failure' }
-        end
+        format.js { render 'success' }
       end
     end
 
