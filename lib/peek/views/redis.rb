@@ -10,11 +10,12 @@ module Peek
     ensure
       duration = (Time.now - start)
       command = args.first[0]
-      key = args.first[1]
 
       # handle namespaced keys
       unless Rails.cache.options[:namespace].nil?
-        key.sub! "#{Rails.cache.options[:namespace]}:", ''
+        key = args.first[1].sub "#{Rails.cache.options[:namespace]}:", ''
+      else
+        key = args.first[1]
       end
 
       ::Redis::Client.query_time.update { |value| value + duration }
