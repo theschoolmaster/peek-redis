@@ -8,13 +8,24 @@ module Peek
 
       begin
         # support for both arrays of cache keys and single string keys
-        # TODO: investigate using expire vs delete here...
+        # we detect globs because SCAN when we have the full key is slow and wasteful
+        # we're only using * in our app so that's all we're testing here, easy to add
+        # addtional patterns if you use them
         if cache_keys.respond_to? :each
           cache_keys.flatten.each do |key|
-            Rails.cache.delete_matched key
+            # test if the key contains a glob style pattern
+            if key.include? '*'
+              Rails.cache.delete_matched key
+            else
+              Rails.cache.delete key
+            end
           end
         else
-          Rails.cache.delete_matched cache_keys
+          if cache_keys.include? '*'
+            Rails.cache.delete_matched cache_keys
+          else
+            Rails.cache.delete cache_keys
+          end
         end
       rescue
         success = false
